@@ -18,17 +18,17 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Shopify (fall back to whichever secret exists)
-      SHOPIFY_STORE_DOMAIN:     ${{ secrets.SHOPIFY_STORE_DOMAIN     || secrets.SHOPIFY_SHOP_DOMAIN }}
-      SHOPIFY_SHOP_DOMAIN:      ${{ secrets.SHOPIFY_SHOP_DOMAIN      || secrets.SHOPIFY_STORE_DOMAIN }}
-      SHOPIFY_ADMIN_TOKEN:      ${{ secrets.SHOPIFY_ADMIN_TOKEN      || secrets.SHOPIFY_ADMIN_API_TOKEN }}
-      SHOPIFY_ADMIN_API_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN  || secrets.SHOPIFY_ADMIN_TOKEN }}
+      # ---- Shopify (map BOTH env keys explicitly; no OR operator) ----
+      SHOPIFY_STORE_DOMAIN:     ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
+      SHOPIFY_SHOP_DOMAIN:      ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
+      SHOPIFY_ADMIN_TOKEN:      ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+      SHOPIFY_ADMIN_API_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
 
-      # GHL
+      # ---- GHL ----
       GHL_FILES_ENDPOINT:       ${{ secrets.GHL_FILES_ENDPOINT }}
       GHL_API_KEY:              ${{ secrets.GHL_API_KEY }}
 
-      # Sync settings
+      # ---- Sync settings ----
       PRODUCT_CODE_REGEX:       "^CS\\d+"
       PRODUCT_HANDLE_TEMPLATE:  "${codeLower}"
       DRY_RUN:                  ${{ github.event.inputs.dry_run || 'true' }}
@@ -48,10 +48,8 @@ jobs:
 
       - name: Install dependencies
         run: npm ci || npm install
-        shell: bash
 
-      # --- Sanity checks (non-sensitive) ---
-      - name: Sanity check environment
+      - name: Sanity check environment (non-sensitive)
         run: |
           echo "SHOPIFY_STORE_DOMAIN=$SHOPIFY_STORE_DOMAIN"
           echo "SHOPIFY_SHOP_DOMAIN=$SHOPIFY_SHOP_DOMAIN"
@@ -59,36 +57,15 @@ jobs:
           echo "ADMIN_API_TOKEN length: ${#SHOPIFY_ADMIN_API_TOKEN}"
           echo "GHL_FILES_ENDPOINT=$GHL_FILES_ENDPOINT"
           echo "DRY_RUN=$DRY_RUN"
-        shell: bash
 
-      - name: Show which sync.js is running
+      - name: Ensure sync.js exists
         run: |
-          if [ ! -f sync.js ]; then
-            echo "❌ sync.js not found at repo root"
-            echo "Contents of repo root:"
-            ls -la
-            exit 1
-          fi
+          test -f sync.js || (echo "❌ sync.js not found at repo root"; ls -la; exit 1)
           echo "sync.js sha1 = $(sha1sum sync.js | awk '{print $1}')"
-          head -n 40 sync.js
-        shell: bash
+          head -n 30 sync.js
 
-      - name: Runtime + deps snapshot
-        run: |
-          set -e
-          node -v
-          npm -v
-          echo "---- package.json ----"
-          cat package.json
-          echo "---- npm ls (top level) ----"
-          npm ls --depth=0 || true
-        shell: bash
-
-      # --- Actual sync step (prints real error if it crashes) ---
       - name: Run GHL → Shopify Sync
         run: |
           set -euo pipefail
           echo "=== Running sync.js (DRY_RUN=$DRY_RUN) ==="
-          node sync.js || { code=$?; echo "❌ sync.js crashed (exit $code)"; exit $code; }
-        shell: bash
-        # working-directory: ./scripts   # <-- uncomment + adjust if sync.js lives elsewhere
+          node sync.js
