@@ -74,3 +74,4 @@ jobs:
           echo "=== Running sync.js (DRY_RUN=$DRY_RUN) ==="
           node sync.js
         shell: bash
+
