@@ -17,14 +17,14 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     env:
-      # Map both names so the script will always see them
-      SHOPIFY_STORE_DOMAIN:      ${{ secrets.SHOPIFY_STORE_DOMAIN || secrets.SHOPIFY_SHOP_DOMAIN }}
-      SHOPIFY_SHOP_DOMAIN:       ${{ secrets.SHOPIFY_SHOP_DOMAIN  || secrets.SHOPIFY_STORE_DOMAIN }}
-      SHOPIFY_ADMIN_TOKEN:       ${{ secrets.SHOPIFY_ADMIN_TOKEN  || secrets.SHOPIFY_ADMIN_API_TOKEN }}
-      SHOPIFY_ADMIN_API_TOKEN:   ${{ secrets.SHOPIFY_ADMIN_API_TOKEN || secrets.SHOPIFY_ADMIN_TOKEN }}
+      # Map both names so the script always sees them
+      SHOPIFY_STORE_DOMAIN:        ${{ secrets.SHOPIFY_STORE_DOMAIN || secrets.SHOPIFY_SHOP_DOMAIN }}
+      SHOPIFY_SHOP_DOMAIN:         ${{ secrets.SHOPIFY_SHOP_DOMAIN  || secrets.SHOPIFY_STORE_DOMAIN }}
+      SHOPIFY_ADMIN_TOKEN:         ${{ secrets.SHOPIFY_ADMIN_TOKEN  || secrets.SHOPIFY_ADMIN_API_TOKEN }}
+      SHOPIFY_ADMIN_API_TOKEN:     ${{ secrets.SHOPIFY_ADMIN_API_TOKEN || secrets.SHOPIFY_ADMIN_TOKEN }}
 
-      GHL_FILES_ENDPOINT:        ${{ secrets.GHL_FILES_ENDPOINT }}
-      GHL_API_KEY:               ${{ secrets.GHL_API_KEY }}
+      GHL_FILES_ENDPOINT:          ${{ secrets.GHL_FILES_ENDPOINT }}
+      GHL_API_KEY:                 ${{ secrets.GHL_API_KEY }}
 
       PRODUCT_CODE_REGEX: "^CS\\d+"
       PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
@@ -42,7 +42,8 @@ jobs:
 
       - run: npm ci || npm install
 
-      - name: Sanity check env (non-secret)
+      # --- sanity: prove the runner sees the right env & file ---
+      - name: Sanity check env (non-sensitive)
         run: |
           echo "SHOPIFY_STORE_DOMAIN=$SHOPIFY_STORE_DOMAIN"
           echo "SHOPIFY_SHOP_DOMAIN=$SHOPIFY_SHOP_DOMAIN"
@@ -53,7 +54,7 @@ jobs:
       - name: Show which sync.js is running
         run: |
           echo "sync.js sha1 = $(sha1sum sync.js | awk '{print $1}')"
-          head -n 20 sync.js
+          head -n 25 sync.js
 
       - name: Run GHL → Shopify Sync
         run: node sync.js
