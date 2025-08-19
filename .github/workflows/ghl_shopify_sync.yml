@@ -65,6 +65,18 @@ jobs:
           head -n 30 sync.js
 
       - name: Run GHL → Shopify Sync
+        env:
+          # Re-map explicitly at the step to remove any ambiguity
+          SHOPIFY_STORE_DOMAIN:     ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
+          SHOPIFY_SHOP_DOMAIN:      ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
+          SHOPIFY_ADMIN_TOKEN:      ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+          SHOPIFY_ADMIN_API_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+          GHL_FILES_ENDPOINT:       ${{ secrets.GHL_FILES_ENDPOINT }}
+          GHL_API_KEY:              ${{ secrets.GHL_API_KEY }}
+          PRODUCT_CODE_REGEX:       "^CS\\d+"
+          PRODUCT_HANDLE_TEMPLATE:  "${codeLower}"
+          DRY_RUN:                  ${{ github.event.inputs.dry_run || 'true' }}
+          NODE_ENV:                 production
         run: |
           set -euo pipefail
           echo "=== Running sync.js (DRY_RUN=$DRY_RUN) ==="
