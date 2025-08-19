@@ -16,21 +16,24 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    env:
-      # Shopify (required)
-      SHOPIFY_SHOP_DOMAIN: ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
-      SHOPIFY_ADMIN_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+env:
+  # Map secrets to BOTH names
+  SHOPIFY_STORE_DOMAIN:  ${{ secrets.SHOPIFY_STORE_DOMAIN  || secrets.SHOPIFY_SHOP_DOMAIN }}
+  SHOPIFY_SHOP_DOMAIN:   ${{ secrets.SHOPIFY_SHOP_DOMAIN   || secrets.SHOPIFY_STORE_DOMAIN }}
+  SHOPIFY_ADMIN_TOKEN:   ${{ secrets.SHOPIFY_ADMIN_TOKEN   || secrets.SHOPIFY_ADMIN_API_TOKEN }}
+  SHOPIFY_ADMIN_API_TOKEN: ${{ secrets.SHOPIFY_ADMIN_API_TOKEN || secrets.SHOPIFY_ADMIN_TOKEN }}
 
-      # GHL feed (required)
-      GHL_FILES_ENDPOINT:   ${{ secrets.GHL_FILES_ENDPOINT }}
-      GHL_API_KEY:          ${{ secrets.GHL_API_KEY }}
+  # Required for pulling your media list
+  GHL_FILES_ENDPOINT:    ${{ secrets.GHL_FILES_ENDPOINT }}
+  GHL_API_KEY:           ${{ secrets.GHL_API_KEY }}
 
-      # Mapping defaults (hardcoded; no secrets needed)
-      PRODUCT_CODE_REGEX: "^CS\\d+"
-      PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
+  # Mapping defaults
+  PRODUCT_CODE_REGEX: "^CS\\d+"
+  PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
 
-      # Safety: start with dry-run true
-      DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+  # Start safe
+  DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+
 
     steps:
       - uses: actions/checkout@v4
