@@ -1,0 +1,14 @@
+{
+  "name": "canyonite-ghl-shopify-sync",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Attach GHL media to Shopify products by code (CS1, CS2...)",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2"
+  },
+  "scripts": {
+    "sync": "node sync.js"
+  }
+}
