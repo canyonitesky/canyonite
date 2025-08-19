@@ -8,7 +8,7 @@ on:
         type: boolean
         default: true
   schedule:
-    - cron: "0 8 * * *" # daily at 8 AM UTC
+    - cron: "0 8 * * *"  # daily at 08:00 UTC
 
 permissions:
   contents: read
@@ -16,9 +16,8 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-
     env:
-      # Shopify env fallbacks (map to whichever secret is set)
+      # Shopify (map to whichever secret you set)
       SHOPIFY_STORE_DOMAIN:     ${{ secrets.SHOPIFY_STORE_DOMAIN     || secrets.SHOPIFY_SHOP_DOMAIN }}
       SHOPIFY_SHOP_DOMAIN:      ${{ secrets.SHOPIFY_SHOP_DOMAIN      || secrets.SHOPIFY_STORE_DOMAIN }}
       SHOPIFY_ADMIN_TOKEN:      ${{ secrets.SHOPIFY_ADMIN_TOKEN      || secrets.SHOPIFY_ADMIN_API_TOKEN }}
@@ -32,6 +31,7 @@ jobs:
       PRODUCT_CODE_REGEX:       "^CS\\d+"
       PRODUCT_HANDLE_TEMPLATE:  "${codeLower}"
       DRY_RUN:                  ${{ github.event.inputs.dry_run || 'true' }}
+      NODE_ENV:                 production
 
     steps:
       - name: Checkout repo
@@ -47,9 +47,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci || npm install
+        shell: bash
 
-      # --- Sanity checks ---
-      - name: Sanity check environment (non-sensitive)
+      # --- Sanity checks (non-sensitive) ---
+      - name: Sanity check environment
         run: |
           echo "SHOPIFY_STORE_DOMAIN=$SHOPIFY_STORE_DOMAIN"
           echo "SHOPIFY_SHOP_DOMAIN=$SHOPIFY_SHOP_DOMAIN"
@@ -57,12 +58,19 @@ jobs:
           echo "ADMIN_API_TOKEN length: ${#SHOPIFY_ADMIN_API_TOKEN}"
           echo "GHL_FILES_ENDPOINT=$GHL_FILES_ENDPOINT"
           echo "DRY_RUN=$DRY_RUN"
+        shell: bash
 
       - name: Show which sync.js is running
         run: |
+          test -f sync.js || (echo "❌ sync.js not found at repo root"; ls -la; exit 1)
           echo "sync.js sha1 = $(sha1sum sync.js | awk '{print $1}')"
-          head -n 25 sync.js
+          head -n 40 sync.js
+        shell: bash
 
-      # --- Actual sync step ---
+      # --- Actual sync step (always prints failure reason) ---
       - name: Run GHL → Shopify Sync
-        run: node sync.js
+        run: |
+          set -euo pipefail
+          echo "=== Running sync.js (DRY_RUN=$DRY_RUN) ==="
+          node sync.js
+        shell: bash
