@@ -17,27 +17,22 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     env:
-      # Map secrets to BOTH names so either code path works
+      # Map both names so the script will always see them
       SHOPIFY_STORE_DOMAIN:      ${{ secrets.SHOPIFY_STORE_DOMAIN || secrets.SHOPIFY_SHOP_DOMAIN }}
       SHOPIFY_SHOP_DOMAIN:       ${{ secrets.SHOPIFY_SHOP_DOMAIN  || secrets.SHOPIFY_STORE_DOMAIN }}
       SHOPIFY_ADMIN_TOKEN:       ${{ secrets.SHOPIFY_ADMIN_TOKEN  || secrets.SHOPIFY_ADMIN_API_TOKEN }}
       SHOPIFY_ADMIN_API_TOKEN:   ${{ secrets.SHOPIFY_ADMIN_API_TOKEN || secrets.SHOPIFY_ADMIN_TOKEN }}
 
-      # GHL feed
       GHL_FILES_ENDPOINT:        ${{ secrets.GHL_FILES_ENDPOINT }}
       GHL_API_KEY:               ${{ secrets.GHL_API_KEY }}
 
-      # Mapping defaults
       PRODUCT_CODE_REGEX: "^CS\\d+"
       PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
-
-      # Start safe
       DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
 
     steps:
       - uses: actions/checkout@v4
         with:
-          # ALWAYS pull the latest commit on the default branch
           fetch-depth: 1
 
       - uses: actions/setup-node@v4
@@ -47,8 +42,7 @@ jobs:
 
       - run: npm ci || npm install
 
-      # ---- Critical sanity checks ----
-      - name: Show env seen by this runner (non-sensitive)
+      - name: Sanity check env (non-secret)
         run: |
           echo "SHOPIFY_STORE_DOMAIN=$SHOPIFY_STORE_DOMAIN"
           echo "SHOPIFY_SHOP_DOMAIN=$SHOPIFY_SHOP_DOMAIN"
@@ -59,7 +53,7 @@ jobs:
       - name: Show which sync.js is running
         run: |
           echo "sync.js sha1 = $(sha1sum sync.js | awk '{print $1}')"
-          head -n 25 sync.js
+          head -n 20 sync.js
 
       - name: Run GHL → Shopify Sync
         run: node sync.js
