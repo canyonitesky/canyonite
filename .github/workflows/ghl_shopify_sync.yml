@@ -16,39 +16,32 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-env:
-  # Map secrets to BOTH names
-  SHOPIFY_STORE_DOMAIN:  ${{ secrets.SHOPIFY_STORE_DOMAIN  || secrets.SHOPIFY_SHOP_DOMAIN }}
-  SHOPIFY_SHOP_DOMAIN:   ${{ secrets.SHOPIFY_SHOP_DOMAIN   || secrets.SHOPIFY_STORE_DOMAIN }}
-  SHOPIFY_ADMIN_TOKEN:   ${{ secrets.SHOPIFY_ADMIN_TOKEN   || secrets.SHOPIFY_ADMIN_API_TOKEN }}
-  SHOPIFY_ADMIN_API_TOKEN: ${{ secrets.SHOPIFY_ADMIN_API_TOKEN || secrets.SHOPIFY_ADMIN_TOKEN }}
+    env:
+      # Shopify creds
+      SHOPIFY_STORE_DOMAIN: ${{ secrets.SHOPIFY_STORE_DOMAIN }}
+      SHOPIFY_ADMIN_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
 
-  # Required for pulling your media list
-  GHL_FILES_ENDPOINT:    ${{ secrets.GHL_FILES_ENDPOINT }}
-  GHL_API_KEY:           ${{ secrets.GHL_API_KEY }}
+      # GHL creds
+      GHL_FILES_ENDPOINT: ${{ secrets.GHL_FILES_ENDPOINT }}
+      GHL_API_KEY:        ${{ secrets.GHL_API_KEY }}
 
-  # Mapping defaults
-  PRODUCT_CODE_REGEX: "^CS\\d+"
-  PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
-
-  # Start safe
-  DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
-
+      # Defaults
+      PRODUCT_CODE_REGEX: "^CS\\d+"
+      PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - run: npm ci || npm install
 
-      - name: Sanity check env (domain + endpoint only)
+      - name: Sanity check env
         run: |
           echo "SHOPIFY_STORE_DOMAIN=$SHOPIFY_STORE_DOMAIN"
+          echo "SHOPIFY_ADMIN_TOKEN length: ${#SHOPIFY_ADMIN_TOKEN}"
           echo "GHL_FILES_ENDPOINT=$GHL_FILES_ENDPOINT"
 
-      - name: Run GHL → Shopify Sync
-        run: node sync.js
+      - run: node sync.js
