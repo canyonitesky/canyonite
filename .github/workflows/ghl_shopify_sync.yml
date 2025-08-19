@@ -16,8 +16,9 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+
     env:
-      # Shopify (map to whichever secret you set)
+      # Shopify (fall back to whichever secret exists)
       SHOPIFY_STORE_DOMAIN:     ${{ secrets.SHOPIFY_STORE_DOMAIN     || secrets.SHOPIFY_SHOP_DOMAIN }}
       SHOPIFY_SHOP_DOMAIN:      ${{ secrets.SHOPIFY_SHOP_DOMAIN      || secrets.SHOPIFY_STORE_DOMAIN }}
       SHOPIFY_ADMIN_TOKEN:      ${{ secrets.SHOPIFY_ADMIN_TOKEN      || secrets.SHOPIFY_ADMIN_API_TOKEN }}
@@ -62,16 +63,21 @@ jobs:
 
       - name: Show which sync.js is running
         run: |
-          test -f sync.js || (echo "❌ sync.js not found at repo root"; ls -la; exit 1)
+          if [ ! -f sync.js ]; then
+            echo "❌ sync.js not found at repo root"
+            echo "Contents of repo root:"
+            ls -la
+            exit 1
+          fi
           echo "sync.js sha1 = $(sha1sum sync.js | awk '{print $1}')"
           head -n 40 sync.js
         shell: bash
 
-      # --- Actual sync step (always prints failure reason) ---
+      # --- Actual sync step ---
       - name: Run GHL → Shopify Sync
         run: |
           set -euo pipefail
           echo "=== Running sync.js (DRY_RUN=$DRY_RUN) ==="
-          node sync.js
+          node sync.js || { echo "❌ sync.js crashed"; exit 1; }
         shell: bash
-
+        # working-directory: ./scripts   # <-- uncomment + adjust if sync.js lives elsewhere
