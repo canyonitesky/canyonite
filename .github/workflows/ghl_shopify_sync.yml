@@ -8,7 +8,7 @@ on:
         type: boolean
         default: true
   schedule:
-    - cron: "0 8 * * *"  # 08:00 UTC daily
+    - cron: "0 8 * * *"
 
 permissions:
   contents: read
@@ -17,31 +17,49 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     env:
-      # Shopify creds
-      SHOPIFY_STORE_DOMAIN: ${{ secrets.SHOPIFY_STORE_DOMAIN }}
-      SHOPIFY_ADMIN_API_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+      # Map secrets to BOTH names so either code path works
+      SHOPIFY_STORE_DOMAIN:      ${{ secrets.SHOPIFY_STORE_DOMAIN || secrets.SHOPIFY_SHOP_DOMAIN }}
+      SHOPIFY_SHOP_DOMAIN:       ${{ secrets.SHOPIFY_SHOP_DOMAIN  || secrets.SHOPIFY_STORE_DOMAIN }}
+      SHOPIFY_ADMIN_TOKEN:       ${{ secrets.SHOPIFY_ADMIN_TOKEN  || secrets.SHOPIFY_ADMIN_API_TOKEN }}
+      SHOPIFY_ADMIN_API_TOKEN:   ${{ secrets.SHOPIFY_ADMIN_API_TOKEN || secrets.SHOPIFY_ADMIN_TOKEN }}
 
-      # GHL creds
-      GHL_FILES_ENDPOINT: ${{ secrets.GHL_FILES_ENDPOINT }}
-      GHL_API_KEY:        ${{ secrets.GHL_API_KEY }}
+      # GHL feed
+      GHL_FILES_ENDPOINT:        ${{ secrets.GHL_FILES_ENDPOINT }}
+      GHL_API_KEY:               ${{ secrets.GHL_API_KEY }}
 
-      # Defaults
+      # Mapping defaults
       PRODUCT_CODE_REGEX: "^CS\\d+"
       PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
+
+      # Start safe
       DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # ALWAYS pull the latest commit on the default branch
+          fetch-depth: 1
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
       - run: npm ci || npm install
 
-      - name: Sanity check env
+      # ---- Critical sanity checks ----
+      - name: Show env seen by this runner (non-sensitive)
         run: |
           echo "SHOPIFY_STORE_DOMAIN=$SHOPIFY_STORE_DOMAIN"
-          echo "SHOPIFY_ADMIN_TOKEN length: ${#SHOPIFY_ADMIN_TOKEN}"
+          echo "SHOPIFY_SHOP_DOMAIN=$SHOPIFY_SHOP_DOMAIN"
+          echo "ADMIN_TOKEN length: ${#SHOPIFY_ADMIN_TOKEN}"
+          echo "ADMIN_API_TOKEN length: ${#SHOPIFY_ADMIN_API_TOKEN}"
           echo "GHL_FILES_ENDPOINT=$GHL_FILES_ENDPOINT"
 
-      - run: node sync.js
+      - name: Show which sync.js is running
+        run: |
+          echo "sync.js sha1 = $(sha1sum sync.js | awk '{print $1}')"
+          head -n 25 sync.js
+
+      - name: Run GHL → Shopify Sync
+        run: node sync.js
