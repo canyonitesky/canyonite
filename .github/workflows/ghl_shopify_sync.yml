@@ -73,11 +73,22 @@ jobs:
           head -n 40 sync.js
         shell: bash
 
-      # --- Actual sync step ---
+      - name: Runtime + deps snapshot
+        run: |
+          set -e
+          node -v
+          npm -v
+          echo "---- package.json ----"
+          cat package.json
+          echo "---- npm ls (top level) ----"
+          npm ls --depth=0 || true
+        shell: bash
+
+      # --- Actual sync step (prints real error if it crashes) ---
       - name: Run GHL → Shopify Sync
         run: |
           set -euo pipefail
           echo "=== Running sync.js (DRY_RUN=$DRY_RUN) ==="
-          node sync.js || { echo "❌ sync.js crashed"; exit 1; }
+          node sync.js || { code=$?; echo "❌ sync.js crashed (exit $code)"; exit $code; }
         shell: bash
         # working-directory: ./scripts   # <-- uncomment + adjust if sync.js lives elsewhere
