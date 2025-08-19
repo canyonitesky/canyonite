@@ -4,6 +4,7 @@ import fetch from 'node-fetch';
 
 /* ========= Env & constants ========= */
 const SHOP =
+  process.env.SHOPIFY_STORE_DOMAIN ||
   process.env.SHOPIFY_SHOP_DOMAIN ||
   '';
 const TOKEN =
