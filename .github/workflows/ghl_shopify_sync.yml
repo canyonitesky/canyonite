@@ -17,24 +17,35 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     env:
-      # Map GitHub Secrets to the env var names your script accepts
-      SHOPIFY_STORE_DOMAIN: ${{ secrets.SHOPIFY_SHOP_DOMAIN || secrets.SHOPIFY_STORE_DOMAIN }}
-      SHOPIFY_ADMIN_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN || secrets.SHOPIFY_ADMIN_TOKEN }}
+      # Shopify (required)
+      SHOPIFY_SHOP_DOMAIN: ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
+      SHOPIFY_ADMIN_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+
+      # GHL feed (required)
       GHL_FILES_ENDPOINT:   ${{ secrets.GHL_FILES_ENDPOINT }}
       GHL_API_KEY:          ${{ secrets.GHL_API_KEY }}
-      PRODUCT_CODE_REGEX:   ${{ secrets.PRODUCT_CODE_REGEX || '^CS\\d+' }}
-      PRODUCT_HANDLE_TEMPLATE: ${{ secrets.PRODUCT_HANDLE_TEMPLATE || '${codeLower}' }}
-      DRY_RUN:              ${{ github.event.inputs.dry_run || 'true' }}
+
+      # Mapping defaults (hardcoded; no secrets needed)
+      PRODUCT_CODE_REGEX: "^CS\\d+"
+      PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
+
+      # Safety: start with dry-run true
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
       - run: npm ci || npm install
+
       - name: Sanity check env (domain + endpoint only)
         run: |
           echo "SHOPIFY_STORE_DOMAIN=$SHOPIFY_STORE_DOMAIN"
           echo "GHL_FILES_ENDPOINT=$GHL_FILES_ENDPOINT"
-      - run: node sync.js
+
+      - name: Run GHL → Shopify Sync
+        run: node sync.js
