@@ -11,6 +11,7 @@ const TOKEN =
   process.env.SHOPIFY_ADMIN_TOKEN ||
   process.env.SHOPIFY_ADMIN_API_TOKEN ||
   '';
+
 const API_VERSION = '2024-07';
 const API = `https://${SHOP}/admin/api/${API_VERSION}/graphql.json`;
 
@@ -150,10 +151,19 @@ async function fetchGhlFiles() {
   const res = await fetch(GHL_FILES_ENDPOINT, { headers });
   if (!res.ok) throw new Error(`GHL fetch HTTP ${res.status}: ${await res.text()}`);
   const json = await res.json();
-  if (!Array.isArray(json)) throw new Error('GHL endpoint must return an array of { url, name?, mime? }');
-  return json
-    .filter(f => f && f.url)
-    .map(f => ({ url: f.url, name: f.name || filenameFromUrl(f.url), mime: f.mime || '' }));
+
+  // Normalize: accept either [] or { files: [] }, tolerate url/link/path and mime/type
+  const list = Array.isArray(json) ? json : Array.isArray(json.files) ? json.files : null;
+  if (!list) throw new Error('GHL endpoint must return an array (or {files:[]}) of { url|link|path, name?, mime|type? }');
+
+  return list
+    .filter(f => f && (f.url || f.link || f.path))
+    .map(f => {
+      const url = f.url || f.link || f.path;
+      const name = f.name || filenameFromUrl(url);
+      const mime = f.mime || f.type || '';
+      return { url, name, mime };
+    });
 }
 
 /* ========= Main ========= */
