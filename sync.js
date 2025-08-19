@@ -7,6 +7,7 @@ const SHOP =
   process.env.SHOPIFY_STORE_DOMAIN ||
   process.env.SHOPIFY_SHOP_DOMAIN ||
   '';
+
 const TOKEN =
   process.env.SHOPIFY_ADMIN_TOKEN ||
   process.env.SHOPIFY_ADMIN_API_TOKEN ||
@@ -24,6 +25,15 @@ const DRY_RUN = String(process.env.DRY_RUN || 'false').toLowerCase() === 'true';
 
 const MEDIA_BATCH_SIZE = Number(process.env.MEDIA_BATCH_SIZE || 8);
 const MAX_RETRIES = 3;
+
+/* ========= Early diagnostics (helps in Actions logs) ========= */
+console.log('— ENV CHECK —');
+console.log('SHOPIFY_STORE_DOMAIN length:', (process.env.SHOPIFY_STORE_DOMAIN || '').length);
+console.log('SHOPIFY_SHOP_DOMAIN  length:', (process.env.SHOPIFY_SHOP_DOMAIN  || '').length);
+console.log('SHOPIFY_ADMIN_TOKEN  length:', (process.env.SHOPIFY_ADMIN_TOKEN  || '').length);
+console.log('SHOPIFY_ADMIN_API_TOKEN length:', (process.env.SHOPIFY_ADMIN_API_TOKEN || '').length);
+console.log('GHL_FILES_ENDPOINT:', GHL_FILES_ENDPOINT);
+console.log('DRY_RUN:', DRY_RUN);
 
 /* ========= Guards ========= */
 if (!SHOP || !TOKEN) {
@@ -152,9 +162,11 @@ async function fetchGhlFiles() {
   if (!res.ok) throw new Error(`GHL fetch HTTP ${res.status}: ${await res.text()}`);
   const json = await res.json();
 
-  // Normalize: accept either [] or { files: [] }, tolerate url/link/path and mime/type
+  // Normalize: [] or { files: [] }, tolerate url/link/path and mime/type
   const list = Array.isArray(json) ? json : Array.isArray(json.files) ? json.files : null;
-  if (!list) throw new Error('GHL endpoint must return an array (or {files:[]}) of { url|link|path, name?, mime|type? }');
+  if (!list) {
+    throw new Error('GHL endpoint must return an array (or {files:[]}) of { url|link|path, name?, mime|type? }');
+  }
 
   return list
     .filter(f => f && (f.url || f.link || f.path))
