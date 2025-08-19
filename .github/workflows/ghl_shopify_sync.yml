@@ -8,7 +8,7 @@ on:
         type: boolean
         default: true
   schedule:
-    - cron: "0 8 * * *"
+    - cron: "0 8 * * *" # daily at 8 AM UTC
 
 permissions:
   contents: read
@@ -16,45 +16,53 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+
     env:
-      # Map both names so the script always sees them
-      SHOPIFY_STORE_DOMAIN:        ${{ secrets.SHOPIFY_STORE_DOMAIN || secrets.SHOPIFY_SHOP_DOMAIN }}
-      SHOPIFY_SHOP_DOMAIN:         ${{ secrets.SHOPIFY_SHOP_DOMAIN  || secrets.SHOPIFY_STORE_DOMAIN }}
-      SHOPIFY_ADMIN_TOKEN:         ${{ secrets.SHOPIFY_ADMIN_TOKEN  || secrets.SHOPIFY_ADMIN_API_TOKEN }}
-      SHOPIFY_ADMIN_API_TOKEN:     ${{ secrets.SHOPIFY_ADMIN_API_TOKEN || secrets.SHOPIFY_ADMIN_TOKEN }}
+      # Shopify env fallbacks (map to whichever secret is set)
+      SHOPIFY_STORE_DOMAIN:     ${{ secrets.SHOPIFY_STORE_DOMAIN     || secrets.SHOPIFY_SHOP_DOMAIN }}
+      SHOPIFY_SHOP_DOMAIN:      ${{ secrets.SHOPIFY_SHOP_DOMAIN      || secrets.SHOPIFY_STORE_DOMAIN }}
+      SHOPIFY_ADMIN_TOKEN:      ${{ secrets.SHOPIFY_ADMIN_TOKEN      || secrets.SHOPIFY_ADMIN_API_TOKEN }}
+      SHOPIFY_ADMIN_API_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN  || secrets.SHOPIFY_ADMIN_TOKEN }}
 
-      GHL_FILES_ENDPOINT:          ${{ secrets.GHL_FILES_ENDPOINT }}
-      GHL_API_KEY:                 ${{ secrets.GHL_API_KEY }}
+      # GHL
+      GHL_FILES_ENDPOINT:       ${{ secrets.GHL_FILES_ENDPOINT }}
+      GHL_API_KEY:              ${{ secrets.GHL_API_KEY }}
 
-      PRODUCT_CODE_REGEX: "^CS\\d+"
-      PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
-      DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+      # Sync settings
+      PRODUCT_CODE_REGEX:       "^CS\\d+"
+      PRODUCT_HANDLE_TEMPLATE:  "${codeLower}"
+      DRY_RUN:                  ${{ github.event.inputs.dry_run || 'true' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20
+          cache: npm
 
-      - run: npm ci || npm install
+      - name: Install dependencies
+        run: npm ci || npm install
 
-      # --- sanity: prove the runner sees the right env & file ---
-      - name: Sanity check env (non-sensitive)
+      # --- Sanity checks ---
+      - name: Sanity check environment (non-sensitive)
         run: |
           echo "SHOPIFY_STORE_DOMAIN=$SHOPIFY_STORE_DOMAIN"
           echo "SHOPIFY_SHOP_DOMAIN=$SHOPIFY_SHOP_DOMAIN"
           echo "ADMIN_TOKEN length: ${#SHOPIFY_ADMIN_TOKEN}"
           echo "ADMIN_API_TOKEN length: ${#SHOPIFY_ADMIN_API_TOKEN}"
           echo "GHL_FILES_ENDPOINT=$GHL_FILES_ENDPOINT"
+          echo "DRY_RUN=$DRY_RUN"
 
       - name: Show which sync.js is running
         run: |
           echo "sync.js sha1 = $(sha1sum sync.js | awk '{print $1}')"
           head -n 25 sync.js
 
+      # --- Actual sync step ---
       - name: Run GHL → Shopify Sync
         run: node sync.js
