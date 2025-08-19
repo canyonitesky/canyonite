@@ -17,6 +17,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
 
+    # Map secrets to the exact env names your script resolves.
     env:
       # ---- Shopify ----
       SHOPIFY_STORE_DOMAIN:     ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
@@ -49,14 +50,31 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Verify environment (non-sensitive)
+      # Quick shell view (non-sensitive)
+      - name: Verify environment (shell, non-sensitive)
         run: |
           echo "SHOPIFY_STORE_DOMAIN=$SHOPIFY_STORE_DOMAIN"
           echo "SHOPIFY_SHOP_DOMAIN=$SHOPIFY_SHOP_DOMAIN"
           echo "ADMIN_TOKEN length: ${#SHOPIFY_ADMIN_TOKEN}"
           echo "ADMIN_API_TOKEN length: ${#SHOPIFY_ADMIN_API_TOKEN}"
           echo "GHL_FILES_ENDPOINT=$GHL_FILES_ENDPOINT"
+          echo "GHL_API_KEY length: ${#GHL_API_KEY}"
           echo "DRY_RUN=$DRY_RUN"
+
+      # Prove what Node sees (masked, non-sensitive)
+      - name: Probe env inside Node (non-sensitive)
+        run: |
+          node -e "
+            const m=v=>!v?'(empty)':(v.length<7?'***':(v.slice(0,3)+'***'+v.slice(-3)));
+            const g=k=>process.env[k]?`${k} -> ${m(process.env[k])} (len=\${process.env[k].length})`:`${k} -> (unset)`;
+            console.log(g('SHOPIFY_STORE_DOMAIN'));
+            console.log(g('SHOPIFY_SHOP_DOMAIN'));
+            console.log(g('SHOPIFY_ADMIN_TOKEN'));
+            console.log(g('SHOPIFY_ADMIN_API_TOKEN'));
+            console.log(g('GHL_FILES_ENDPOINT'));
+            console.log(g('GHL_API_KEY'));
+            console.log('DRY_RUN ->', process.env.DRY_RUN);
+          "
 
       - name: Ensure sync.js exists
         run: |
@@ -68,7 +86,19 @@ jobs:
           echo "sync.js sha1 = $(sha1sum sync.js | awk '{print $1}')"
           head -n 30 sync.js
 
+      # Explicitly remap env again at the step (removes any ambiguity)
       - name: Run GHL → Shopify Sync
+        env:
+          SHOPIFY_STORE_DOMAIN:     ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
+          SHOPIFY_SHOP_DOMAIN:      ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
+          SHOPIFY_ADMIN_TOKEN:      ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+          SHOPIFY_ADMIN_API_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+          GHL_FILES_ENDPOINT:       ${{ secrets.GHL_FILES_ENDPOINT }}
+          GHL_API_KEY:              ${{ secrets.GHL_API_KEY }}
+          PRODUCT_CODE_REGEX:       "^CS\\d+"
+          PRODUCT_HANDLE_TEMPLATE:  "${codeLower}"
+          DRY_RUN:                  ${{ github.event.inputs.dry_run || 'true' }}
+          NODE_ENV:                 production
         run: |
           set -euo pipefail
           echo "=== Running sync.js (DRY_RUN=$DRY_RUN) ==="
