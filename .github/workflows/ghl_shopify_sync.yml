@@ -1,0 +1,30 @@
+name: GHL → Shopify Sync
+
+on:
+  workflow_dispatch:   # allows manual run
+  schedule:
+    - cron: "0 * * * *"   # runs every hour
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run GHL → Shopify Sync
+        env:
+          SHOPIFY_SHOP_DOMAIN: ${{ secrets.SHOPIFY_SHOP_DOMAIN }}
+          SHOPIFY_ADMIN_API_TOKEN: ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+          GHL_API_KEY: ${{ secrets.GHL_API_KEY }}
+          PRODUCT_CODE_REGEX: "^CS\\d+"
+          PRODUCT_HANDLE_TEMPLATE: "${codeLower}"
+        run: node sync.js
