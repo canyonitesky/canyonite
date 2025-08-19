@@ -92,4 +92,3 @@ jobs:
           node sync.js || { code=$?; echo "❌ sync.js crashed (exit $code)"; exit $code; }
         shell: bash
         # working-directory: ./scripts   # <-- uncomment + adjust if sync.js lives elsewhere
-
