@@ -19,7 +19,7 @@ jobs:
     env:
       # Shopify creds
       SHOPIFY_STORE_DOMAIN: ${{ secrets.SHOPIFY_STORE_DOMAIN }}
-      SHOPIFY_ADMIN_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
+      SHOPIFY_ADMIN_API_TOKEN:  ${{ secrets.SHOPIFY_ADMIN_API_TOKEN }}
 
       # GHL creds
       GHL_FILES_ENDPOINT: ${{ secrets.GHL_FILES_ENDPOINT }}
